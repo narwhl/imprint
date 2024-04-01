@@ -1,7 +1,7 @@
 # Imprint GitHub Action
 
 This GitHub Action authenticates itself to a Security Token Service API running on Cloudflare Workers
-```
+```yml
 - name: Keyless Authentication for exchanging resource token
   uses: narwhl/imprint@v1
   with:

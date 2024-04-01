@@ -11,6 +11,7 @@ runs:
   using: composite
   steps:
     - name: Get federated access token with ID token
+      shell: bash
       run: |
         ID_TOKEN=$(curl -sLS "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.narwhl.workers.dev" -H "User-Agent: actions/oidc-client" -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" | jq -r '.value')
         echo "WORKLOAD_ID=$(echo ID_TOKEN | jq -R 'split(".") | .[1] | @base64d | fromjson' | jq -r '.jti')" >> $GITHUB_ENV
@@ -30,6 +31,7 @@ runs:
         --header "Content-Type: application/json" \
         --data "${PAYLOAD}" > federated_token.json || cat federated_token.json
     - name: Exchange access token for resources
+      shell: bash
       run: | 
         export FEDERATED_TOKEN=$(jq -r '.access_token' federated_token.json)
         curl --fail-with-body "https://sts.narwhl.workers.dev/v1/notarize/$WORKLOAD_ID/resources" \
@@ -37,6 +39,7 @@ runs:
         --header "Content-Type: application/json" \
         --header "Authorization: Bearer ${FEDERATED_TOKEN}" >> federated_resources.json
     - name: Set resource data to environment variables
+      shell: bash
       run: |
         if [ "$( cat federated_resources.json | jq -r 'has("tailscale")' )" == "true" ]; then
           echo "TAILSCALE_AUTHKEY=$(cat federated_resources.json | jq -r '.tailscale.auth_key')" >> $GITHUB_ENV
