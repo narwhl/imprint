@@ -32,7 +32,7 @@ runs:
         --data "${PAYLOAD}" > federated_token.json || cat federated_token.json
     - name: Exchange access token for resources
       shell: bash
-      run: | 
+      run: |
         export FEDERATED_TOKEN=$(jq -r '.access_token' federated_token.json)
         curl --fail-with-body "https://sts.narwhl.workers.dev/v1/notarize/$WORKLOAD_ID/resources" \
         --header "Accept: application/json" \
@@ -42,18 +42,34 @@ runs:
       shell: bash
       run: |
         if [ "$( cat federated_resources.json | jq -r 'has("tailscale")' )" == "true" ]; then
-          echo "::add-mask::TAILSCALE_AUTHKEY=$(cat federated_resources.json | jq -r '.tailscale.auth_key')" >> $GITHUB_ENV
+          TAILSCALE_AUTHKEY=$(cat federated_resources.json | jq -r '.tailscale.auth_key')
+          echo "::add-mask::$TAILSCALE_AUTHKEY"
+          echo TAILSCALE_AUTHKEY=$TAILSCALE_AUTHKEY >> $GITHUB_ENV
         fi
         if [ "$( cat federated_resources.json | jq -r 'has("cloudflare")' )" == "true" ]; then
-          echo "::add-mask::AWS_ACCESS_KEY_ID=$(cat federated_resources.json | jq -r '.cloudflare.access_key_id')" >> $GITHUB_ENV
-          echo "::add-mask::AWS_SECRET_ACCESS_KEY=$(cat federated_resources.json | jq -r '.cloudflare.secret_access_key')" >> $GITHUB_ENV
-          echo "::add-mask::AWS_ENDPOINT_URL_S3=$(cat federated_resources.json | jq -r '.cloudflare.s3_endpoint_url')" >> $GITHUB_ENV
+          AWS_ACCESS_KEY_ID=$(cat federated_resources.json | jq -r '.cloudflare.access_key_id')
+          AWS_SECRET_ACCESS_KEY=$(cat federated_resources.json | jq -r '.cloudflare.secret_access_key')
+          AWS_ENDPOINT_URL_S3=$(cat federated_resources.json | jq -r '.cloudflare.s3_endpoint_url')
+          echo "::add-mask::$AWS_ACCESS_KEY_ID"
+          echo "::add-mask::$AWS_SECRET_ACCESS_KEY"
+          echo "::add-mask::$AWS_ENDPOINT_URL_S3"
+          echo AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID >> $GITHUB_ENV
+          echo AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY >> $GITHUB_ENV
+          echo AWS_ENDPOINT_URL_S3=$AWS_ENDPOINT_URL_S3 >> $GITHUB_ENV
         fi
         if [ "$( cat federated_resources.json | jq -r 'has("proxmox")' )" == "true" ]; then
-          echo "::add-mask::PROXMOX_VE_USERNAME=$(cat federated_resources.json | jq -r '.proxmox.proxmox_username')" >> $GITHUB_ENV
-          echo "::add-mask::PROXMOX_VE_PASSWORD=$(cat federated_resources.json | jq -r '.proxmox.proxmox_password')" >> $GITHUB_ENV
+          PROXMOX_VE_USERNAME=$(cat federated_resources.json | jq -r '.proxmox.proxmox_username')
+          PROXMOX_VE_PASSWORD=$(cat federated_resources.json | jq -r '.proxmox.proxmox_password')
+          echo "::add-mask::$PROXMOX_VE_USERNAME"
+          echo "::add-mask::$PROXMOX_VE_PASSWORD"
+          echo PROXMOX_VE_USERNAME=$PROXMOX_VE_USERNAME >> $GITHUB_ENV
+          echo PROXMOX_VE_PASSWORD=$PROXMOX_VE_PASSWORD >> $GITHUB_ENV
         fi
         if [ "$( cat federated_resources.json | jq -r 'has("vsphere")' )" == "true" ]; then
-          echo "::add-mask::VSPHERE_USER=$(cat federated_resources.json | jq -r '.vsphere.vsphere_username')" >> $GITHUB_ENV
-          echo "::add-mask::VSPHERE_PASSWORD=$(cat federated_resources.json | jq -r '.vsphere.vsphere_password')" >> $GITHUB_ENV
+          VSPHERE_USER=$(cat federated_resources.json | jq -r '.vsphere.vsphere_username')
+          VSPHERE_PASSWORD=$(cat federated_resources.json | jq -r '.vsphere.vsphere_password')
+          echo "::add-mask::$VSPHERE_USER"
+          echo "::add-mask::$VSPHERE_PASSWORD"
+          echo VSPHERE_USER=$VSPHERE_USER >> $GITHUB_ENV
+          echo VSPHERE_PASSWORD=$VSPHERE_PASSWORD >> $GITHUB_ENV
         fi
