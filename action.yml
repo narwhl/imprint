@@ -10,66 +10,52 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Get federated access token with ID token
-      shell: bash
-      run: |
-        ID_TOKEN=$(curl -sLS "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.narwhl.workers.dev" -H "User-Agent: actions/oidc-client" -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" | jq -r '.value')
-        echo "WORKLOAD_ID=$(echo $ID_TOKEN | jq -R 'split(".") | .[1] | @base64d | fromjson' | jq -r '.jti')" >> $GITHUB_ENV
-        PAYLOAD=$(cat <<EOF
-        {
-        "audience": "//sts.narwhl.workers.dev/providers/github/passports/${{ inputs.subject }}",
-        "grantType": "urn:ietf:params:oauth:grant-type:token-exchange",
-        "requestedTokenType": "urn:ietf:params:oauth:token-type:access_token",
-        "scope": "${{ inputs.scope }}",
-        "subjectTokenType": "urn:ietf:params:oauth:token-type:jwt",
-        "subjectToken": "${ID_TOKEN}"
-        }
-        EOF
-        )
-        curl --fail-with-body -X POST "https://sts.narwhl.workers.dev/v1/token" \
-        --header "Accept: application/json" \
-        --header "Content-Type: application/json" \
-        --data "${PAYLOAD}" > federated_token.json || cat federated_token.json
-    - name: Exchange access token for resources
-      shell: bash
-      run: |
-        export FEDERATED_TOKEN=$(jq -r '.access_token' federated_token.json)
-        curl --fail-with-body "https://sts.narwhl.workers.dev/v1/notarize/$WORKLOAD_ID/resources" \
-        --header "Accept: application/json" \
-        --header "Content-Type: application/json" \
-        --header "Authorization: Bearer ${FEDERATED_TOKEN}" >> federated_resources.json
-    - name: Set resource data to environment variables
-      shell: bash
-      run: |
-        if [ "$( cat federated_resources.json | jq -r 'has("tailscale")' )" == "true" ]; then
-          TAILSCALE_AUTHKEY=$(cat federated_resources.json | jq -r '.tailscale.auth_key')
-          echo "::add-mask::$TAILSCALE_AUTHKEY"
-          echo TAILSCALE_AUTHKEY=$TAILSCALE_AUTHKEY >> $GITHUB_ENV
-        fi
-        if [ "$( cat federated_resources.json | jq -r 'has("cloudflare")' )" == "true" ]; then
-          AWS_ACCESS_KEY_ID=$(cat federated_resources.json | jq -r '.cloudflare.access_key_id')
-          AWS_SECRET_ACCESS_KEY=$(cat federated_resources.json | jq -r '.cloudflare.secret_access_key')
-          AWS_ENDPOINT_URL_S3=$(cat federated_resources.json | jq -r '.cloudflare.s3_endpoint_url')
-          echo "::add-mask::$AWS_ACCESS_KEY_ID"
-          echo "::add-mask::$AWS_SECRET_ACCESS_KEY"
-          echo "::add-mask::$AWS_ENDPOINT_URL_S3"
-          echo AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID >> $GITHUB_ENV
-          echo AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY >> $GITHUB_ENV
-          echo AWS_ENDPOINT_URL_S3=$AWS_ENDPOINT_URL_S3 >> $GITHUB_ENV
-        fi
-        if [ "$( cat federated_resources.json | jq -r 'has("proxmox")' )" == "true" ]; then
-          PROXMOX_VE_USERNAME=$(cat federated_resources.json | jq -r '.proxmox.proxmox_username')
-          PROXMOX_VE_PASSWORD=$(cat federated_resources.json | jq -r '.proxmox.proxmox_password')
-          echo "::add-mask::$PROXMOX_VE_USERNAME"
-          echo "::add-mask::$PROXMOX_VE_PASSWORD"
-          echo PROXMOX_VE_USERNAME=$PROXMOX_VE_USERNAME >> $GITHUB_ENV
-          echo PROXMOX_VE_PASSWORD=$PROXMOX_VE_PASSWORD >> $GITHUB_ENV
-        fi
-        if [ "$( cat federated_resources.json | jq -r 'has("vsphere")' )" == "true" ]; then
-          VSPHERE_USER=$(cat federated_resources.json | jq -r '.vsphere.vsphere_username')
-          VSPHERE_PASSWORD=$(cat federated_resources.json | jq -r '.vsphere.vsphere_password')
-          echo "::add-mask::$VSPHERE_USER"
-          echo "::add-mask::$VSPHERE_PASSWORD"
-          echo VSPHERE_USER=$VSPHERE_USER >> $GITHUB_ENV
-          echo VSPHERE_PASSWORD=$VSPHERE_PASSWORD >> $GITHUB_ENV
-        fi
+    - uses: actions/github-script@v7
+      with:
+        script: |
+          const stsTokenEndpoint = 'sts.narwhl.workers.dev';
+          const token = await core.getIDToken(stsTokenEndpoint);
+          const { jti } = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+          const payload = {
+            audience: `//${stsTokenEndpoint}/providers/github/passports/${{ inputs.subject }}`,
+            grantType: "urn:ietf:params:oauth:grant-type:token-exchange",
+            requestedTokenType: "urn:ietf:params:oauth:token-type:access_token",
+            scope: "${{ inputs.scope }}",
+            subjectTokenType: "urn:ietf:params:oauth:token-type:jwt",
+            subjectToken: token
+          };
+          let response = await fetch(`https://${stsTokenEndpoint}/v1/token`, {
+            method: "POST",
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+          const { access_token } = await response.json();
+          response = await fetch(`https://${stsTokenEndpoint}/v1/notarize/${jti}/resources`, {
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${access_token}`
+            }
+          })
+          const resources = await response.json();
+          for (const resource of Object.keys(resources)) {
+            Object.entries(resources[resource]).forEach(([key, value]) => {
+              core.setSecret(value);
+              core.exportVariable({
+                'tailscale.auth_key':'TAILSCALE_AUTHKEY',
+                'cloudflare.access_key_id': 'AWS_ACCESS_KEY_ID',
+                'cloudflare.secret_access_key': 'AWS_SECRET_ACCESS_KEY',
+                'cloudflare.s3_endpoint_url': 'AWS_ENDPOINT_URL_S3',
+                'vsphere.username': 'VSPHERE_USER',
+                'vsphere.password': 'VSPHERE_PASSWORD',
+                'github.access_token': 'GITHUB_TOKEN',
+                'proxmox.username': 'PROXMOX_VE_USERNAME',
+                'proxmox.password': 'PROXMOX_VE_PASSWORD',
+                'onepassword.service_account_token': 'OP_SERVICE_ACCOUNT_TOKEN',
+              }[`${resource}.${key}`], value);
+            })
+          }
+          return;
