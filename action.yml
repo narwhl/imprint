@@ -49,6 +49,8 @@ runs:
                 'cloudflare.access_key_id': 'AWS_ACCESS_KEY_ID',
                 'cloudflare.secret_access_key': 'AWS_SECRET_ACCESS_KEY',
                 'cloudflare.s3_endpoint_url': 'AWS_ENDPOINT_URL_S3',
+                'cloudflare:access.client_id': 'CF_ACCESS_CLIENT_ID',
+                'cloudflare:access.client_secret': 'CF_ACCESS_CLIENT_SECRET',
                 'vsphere.server': 'VSPHERE_SERVER',
                 'vsphere.username': 'VSPHERE_USER',
                 'vsphere.password': 'VSPHERE_PASSWORD',
