@@ -32,6 +32,9 @@ runs:
             },
             body: JSON.stringify(payload)
           });
+          if(response.status !== 200) {
+            core.setFailed('Aborting due to inability to obtain access token')
+          }
           const { access_token } = await response.json();
           response = await fetch(`https://${stsTokenEndpoint}/v1/notarize/${jti}/resources`, {
             headers: {
@@ -40,6 +43,9 @@ runs:
               'Authorization': `Bearer ${access_token}`
             }
           })
+          if(response.status !== 200) {
+            core.setFailed('Aborting due to failure of notarizing for requested workload')
+          }
           const resources = await response.json();
           for (const resource of Object.keys(resources)) {
             Object.entries(resources[resource]).forEach(([key, value]) => {
