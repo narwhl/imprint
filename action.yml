@@ -53,6 +53,7 @@ runs:
                   core.exportVariable({
                     'tailscale.auth_key':'TAILSCALE_AUTHKEY',
                     'cloudflare.access_key_id': 'AWS_ACCESS_KEY_ID',
+                    'cloudflare.access_token': 'CF_R2_API_TOKEN',
                     'cloudflare.secret_access_key': 'AWS_SECRET_ACCESS_KEY',
                     'cloudflare.s3_endpoint_url': 'AWS_ENDPOINT_URL_S3',
                     'cloudflare:access.client_id': 'CF_ACCESS_CLIENT_ID',
