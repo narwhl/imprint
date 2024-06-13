@@ -47,28 +47,10 @@ runs:
               core.setFailed('Aborting due to failure of notarizing for requested workload')
             } else {
               const resources = await response.json();
-              for (const resource of Object.keys(resources)) {
-                Object.entries(resources[resource]).forEach(([key, value]) => {
-                  core.setSecret(value);
-                  core.exportVariable({
-                    'tailscale.auth_key':'TAILSCALE_AUTHKEY',
-                    'cloudflare.access_key_id': 'CF_R2_ACCESS_KEY_ID',
-                    'cloudflare.access_token': 'CF_R2_API_TOKEN',
-                    'cloudflare.secret_access_key': 'CF_R2_SECRET_ACCESS_KEY',
-                    'cloudflare.s3_endpoint_url': 'CF_R2_ENDPOINT_URL',
-                    'cloudflare:access.client_id': 'CF_ACCESS_CLIENT_ID',
-                    'cloudflare:access.client_secret': 'CF_ACCESS_CLIENT_SECRET',
-                    'vsphere.server': 'VSPHERE_SERVER',
-                    'vsphere.username': 'VSPHERE_USER',
-                    'vsphere.password': 'VSPHERE_PASSWORD',
-                    'github.access_token': 'GITHUB_TOKEN',
-                    'proxmox.endpoint_url': 'PROXMOX_VE_ENDPOINT',
-                    'proxmox.username': 'PROXMOX_VE_USERNAME',
-                    'proxmox.password': 'PROXMOX_VE_PASSWORD',
-                    'onepassword.service_account_token': 'OP_SERVICE_ACCOUNT_TOKEN',
-                  }[`${resource}.${key}`], value);
-                })
-              }
+              Object.entries(resources).forEach(([key, value]) => {
+                core.setSecret(value);
+                core.exportVariable(key, value);
+              })
             }
           }
           return;
