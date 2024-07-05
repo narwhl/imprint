@@ -1,9 +1,6 @@
 name: Imprint
 description: Authenticate Github Actions Runner via OIDC id token
 inputs:
-  subject:
-    required: true
-    default: narwhl
   scope:
     required: true
 
@@ -17,7 +14,7 @@ runs:
           const token = await core.getIDToken(stsTokenEndpoint);
           const { jti } = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
           const payload = {
-            audience: `//${stsTokenEndpoint}/providers/github/passports/${{ inputs.subject }}`,
+            audience: `//${stsTokenEndpoint}/providers/github`,
             grantType: "urn:ietf:params:oauth:grant-type:token-exchange",
             requestedTokenType: "urn:ietf:params:oauth:token-type:access_token",
             scope: "${{ inputs.scope }}",
