@@ -30,9 +30,9 @@ runs:
             body: JSON.stringify(payload)
           });
           if(response.status !== 200) {
-            core.setFailed('Aborting due to inability to obtain access token')
+            core.setFailed(`${new Date().toISOString()} [✗] Aborting due to inability to obtain access token`)
           } else {
-            console.log(`OIDC claims validated for workload: ${jti}`)
+            console.log(`${new Date().toISOString()} [✔] OIDC claims validated for workload: ${jti}`)
             const { access_token } = await response.json();
             response = await fetch(`https://${stsTokenEndpoint}/v1/notarize/${jti}/resources`, {
               headers: {
@@ -42,15 +42,15 @@ runs:
               }
             })
             if(response.status !== 200) {
-              core.setFailed('Aborting due to failure of notarizing for requested workload')
+              core.setFailed(`${new Date().toISOString()} [✗] Aborting due to failure of notarizing for requested workload`)
             } else {
-              console.log(`Authenticated with issued access token`)
+              console.log(`${new Date().toISOString()} [✔] Authenticated with issued access token`)
               const resources = await response.json();
               Object.entries(resources).forEach(([key, value]) => {
                 core.setSecret(value);
                 core.exportVariable(key, value);
               })
-              console.log("Credentials for requested scope are contextualized via environment variables")
+              console.log(`${new Date().toISOString()} [✔] Credentials for requested scope are contextualized via environment variables`)
             }
           }
           return;
