@@ -30,7 +30,7 @@ runs:
             body: JSON.stringify(payload)
           });
           if(response.status !== 200) {
-            core.setFailed(`${new Date().toISOString()} [✗] Aborting due to inability to obtain access token`)
+            core.setFailed(`${new Date().toISOString()} [✗] Unable to obtain access token from sts, error: ${response.status}`)
           } else {
             console.log(`${new Date().toISOString()} [✔] OIDC claims validated for workload: ${jti}`)
             const { access_token } = await response.json();
@@ -42,7 +42,7 @@ runs:
               }
             })
             if(response.status !== 200) {
-              core.setFailed(`${new Date().toISOString()} [✗] Aborting due to failure of notarizing for requested workload`)
+              core.setFailed(`${new Date().toISOString()} [✗] Unable to exchange resource credentials with access token for the requested workload, error: ${response.status}`)
             } else {
               console.log(`${new Date().toISOString()} [✔] Authenticated with issued access token`)
               const resources = await response.json();
