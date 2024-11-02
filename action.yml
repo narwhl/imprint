@@ -60,7 +60,6 @@ runs:
               return Object.keys(resources).some(key => key.includes('CERT'));
             }
           }
-          return;
     - name: Update certificate trust store
       if: ${{ steps.script.outputs.result == 'true' }}
       shell: bash
