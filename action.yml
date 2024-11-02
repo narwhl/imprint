@@ -9,7 +9,9 @@ runs:
   steps:
     - uses: actions/github-script@v7
       with:
+        result-encoding: string
         script: |
+          const fs = require('fs')
           const stsTokenEndpoint = 'sts.narwhl.workers.dev';
           const token = await core.getIDToken(stsTokenEndpoint);
           const { jti } = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
@@ -30,9 +32,9 @@ runs:
             body: JSON.stringify(payload)
           });
           if(response.status !== 200) {
-            core.setFailed(`${new Date().toISOString()} [✗] Unable to obtain access token from sts, error: ${response.status}`)
+            core.setFailed(`${new Date().toISOString()} [✗] Unable to obtain access token from sts, error: ${response.status}`);
           } else {
-            console.log(`${new Date().toISOString()} [✔] OIDC claims validated for workload: ${jti}`)
+            console.log(`${new Date().toISOString()} [✔] OIDC claims validated for workload: ${jti}`);
             const { access_token } = await response.json();
             response = await fetch(`https://${stsTokenEndpoint}/v1/notarize/${jti}/resources`, {
               headers: {
@@ -40,17 +42,28 @@ runs:
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${access_token}`
               }
-            })
+            });
             if(response.status !== 200) {
-              core.setFailed(`${new Date().toISOString()} [✗] Unable to exchange resource credentials with access token for the requested workload, error: ${response.status}`)
+              core.setFailed(`${new Date().toISOString()} [✗] Unable to exchange resource credentials with access token for the requested workload, error: ${response.status}`);
             } else {
-              console.log(`${new Date().toISOString()} [✔] Authenticated with issued access token`)
+              console.log(`${new Date().toISOString()} [✔] Authenticated with issued access token`);
               const resources = await response.json();
               Object.entries(resources).forEach(([key, value]) => {
-                core.setSecret(value);
-                core.exportVariable(key, value);
+                if (key.includes('CERT')) {
+                  fs.writeFileSync(`./${context.repo.owner}_${key.toLowerCase()}.pem`, value);
+                } else {
+                  core.setSecret(value);
+                  core.exportVariable(key, value); 
+                }
               })
-              console.log(`${new Date().toISOString()} [✔] Credentials for requested scope are contextualized via environment variables`)
+              console.log(`${new Date().toISOString()} [✔] Credentials for requested scope are contextualized via environment variables`);
+              return Object.keys(resources).some(key => key.includes('CERT'));
             }
           }
           return;
+    - name: Update certificate trust store
+      if: ${{ steps.script.outputs.result == 'true' }}
+      shell: bash
+      run: |
+        sudo cp *.pem /usr/local/share/ca-certificates/
+        sudo update-ca-certificates
