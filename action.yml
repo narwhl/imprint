@@ -32,7 +32,8 @@ runs:
             body: JSON.stringify(payload)
           });
           if(response.status !== 200) {
-            core.setFailed(`${new Date().toISOString()} [✗] Unable to obtain access token from sts, error: ${response.status}`);
+            const message = await response.text();
+            core.setFailed(`${new Date().toISOString()} [✗] Unable to obtain access token from sts, error: ${response.status} ${message}`);
           } else {
             console.log(`${new Date().toISOString()} [✔] OIDC claims validated for workload: ${jti}`);
             const { access_token } = await response.json();
@@ -44,7 +45,8 @@ runs:
               }
             });
             if(response.status !== 200) {
-              core.setFailed(`${new Date().toISOString()} [✗] Unable to exchange resource credentials with access token for the requested workload, error: ${response.status}`);
+              const message = await response.text();
+              core.setFailed(`${new Date().toISOString()} [✗] Unable to exchange resource credentials with access token for the requested workload, error: ${response.status} ${message}`);
             } else {
               console.log(`${new Date().toISOString()} [✔] Authenticated with issued access token`);
               const resources = await response.json();
