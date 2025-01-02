@@ -37,6 +37,8 @@ runs:
           } else {
             console.log(`${new Date().toISOString()} [✔] OIDC claims validated for workload: ${jti}`);
             const { access_token } = await response.json();
+            core.setSecret(access_token);
+            core.exportVariable('FEDERATED_TOKEN', access_token);
             response = await fetch(`https://${stsTokenEndpoint}/v1/notarize/${jti}/resources`, {
               headers: {
                 'Accept': 'application/json',
