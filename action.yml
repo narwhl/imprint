@@ -57,7 +57,8 @@ runs:
                   fs.writeFileSync(`./${context.repo.owner}_${key.toLowerCase()}.pem`, value);
                 } else {
                   core.setSecret(value);
-                  core.exportVariable(key, value); 
+                  core.exportVariable(key, value);
+                  console.log(`${new Date().toISOString()} [!] Populated environment variable: ${key}`);
                 }
               })
               console.log(`${new Date().toISOString()} [✔] Credentials for requested scope are contextualized via environment variables`);
